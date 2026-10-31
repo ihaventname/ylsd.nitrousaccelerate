@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using Smoke;
 
 namespace NitrousAccelerate
 {
@@ -16,22 +17,21 @@ namespace NitrousAccelerate
             public float baseScale;
             public bool bounced = false;
         }
-
         //Debug
-        private const int parnum = 30;
-        private const float angle = 15f;
-        private const float minspeed = 10f;
-        private const float maxspeed = 20f;
-        private const float difference = 5f;
-        private const float mintime = 10f;
-        private const float maxtime = 20f;
-        private const float scalemutiple = 0.5f;
+        private const int PAR_NUM = 35;
+        private const float ANGLE = 15f;
+        private const float MIN_SPEED = 10f;
+        private const float MAX_SPEED = 20f;
+        private const float DIFFERENCE = 5f;
+        private const float MIN_TIME = 10f;
+        private const float MAX_TIME = 20f;
+        private const float SCALE_MUTIPLE = 0.35f;
 
 
         private Vector2 origin;
         private Vector2 baseDir;
         private List<Particle> particles = new List<Particle>();
-        private const int ParticleCount = parnum; // 粒子数量
+        private const int ParticleCount = PAR_NUM; // 粒子数量
         private Room nowRoom;
 
         public JetEffect(Vector2 pos, Vector2 dir, Room nowRoom)
@@ -44,18 +44,18 @@ namespace NitrousAccelerate
             for (int i = 0; i < ParticleCount; i++)
             {
                 // 基础方向加上随机偏转，形成扇形扩散（最大偏转约45度）
-                float randomAngle = Random.Range(-angle, angle);
+                float randomAngle = Random.Range(-ANGLE, ANGLE);
                 Vector2 pVel = RotateVector(baseDir, randomAngle);
 
                 // 赋予不同的速度 (基础速度 + 随机扰动)
-                float speed = Random.Range(minspeed, maxspeed);
+                float speed = Random.Range(MIN_SPEED, MAX_SPEED);
                 pVel *= speed;
 
                 // 粒子初始位置稍微在屁股后面一点
-                Vector2 pPos = pos + baseDir * Random.Range(0f, difference);
+                Vector2 pPos = pos + baseDir * Random.Range(0f, DIFFERENCE);
 
                 // 随机生命周期（10帧到20帧）
-                float pLife = Random.Range(mintime, maxtime);
+                float pLife = Random.Range(MIN_TIME, MAX_TIME);
 
                 particles.Add(new Particle
                 {
@@ -173,15 +173,30 @@ namespace NitrousAccelerate
                 sprite.SetPosition(p.pos - camPos);
                 sprite.rotation = p.rotation;
 
+
+                Color finalColor;
+                if (NitrousAccelerateOptions.Instence.isRainbow.Value)
+                {
+                    // 利用房间的 tick 配合粒子自身进度，让颜色流转
+                    // 色相(Hue)在0到1之间循环
+                    float hue = (nowRoom.ticker * 0.01f + p.life * 0.05f) % 1f;
+                    finalColor = Color.HSVToRGB(hue, 1f, 1f);
+                }
+                else
+                {
+                    finalColor = NitrousAccelerateOptions.Instence.accelerateColor.Value;
+                }
+                sprite.color = finalColor;
+
                 // 颜色统一使用配置中的颜色
-                sprite.color = NitrousAccelerateOptions.Instence.accelerateColor.Value;
+                //sprite.color = NitrousAccelerateOptions.Instence.accelerateColor.Value;
 
                 // 计算透明度进度 (1.0 -> 0.0)
                 float progress = p.life / p.maxLife;
                 sprite.alpha = progress;
 
                 // 粒子随着生命流逝而变大（模拟气体膨胀），同时变淡
-                float scale = p.baseScale * (2f - progress) * scalemutiple;
+                float scale = p.baseScale * (2f - progress) * SCALE_MUTIPLE;
                 sprite.scaleX = scale;
                 sprite.scaleY = scale;
             }
