@@ -16,7 +16,7 @@ namespace NitrousAccelerate
     {
         private const string MOD_ID = "nitrousaccelerate";
         private const string MOD_NAME = "Nitrous Accelerate";
-        private const string MOD_VERSION = "1.0.0";
+        private const string MOD_VERSION = "1.1.0";
 
         NitrousAccelerateOptions options;
         public static PlayerKeybind actKey;
@@ -61,8 +61,6 @@ namespace NitrousAccelerate
         {
             actKey = PlayerKeybind.Register("nitrous_boost", MOD_NAME, "氮气加速", KeyCode.C, KeyCode.JoystickButton3);
         }
-
-
 
         private void Options(On.RainWorld.orig_OnModsInit orig, RainWorld self)
         {
@@ -112,7 +110,16 @@ namespace NitrousAccelerate
                 Vector2 dirc = RWCustom.Custom.DirVec(headPos, hipsPos);
 
                 // 把 JetEffect 添加到玩家所在的房间
-                self.room.AddObject(new JetEffect(hipsPos, dirc,self.room));
+                switch (NitrousAccelerateOptions.Instence.effect.Value)
+                {
+                    case Effect.方形粒子:
+                        self.room.AddObject(new JetEffect(hipsPos, dirc, self.room));
+                        break;
+                    case Effect.烟雾:
+                        self.room.AddObject(new SmokeEffect(hipsPos, dirc, self.room));
+                        break;
+                }
+                //self.room.AddObject(new JetEffect(hipsPos, dirc,self.room));
 
                 // 3. 播放音效
                 PlayAccelerateSound(self);
@@ -120,7 +127,7 @@ namespace NitrousAccelerate
                 // 4. 概率掉落石头
                 if (UnityEngine.Random.value <= NitrousAccelerateOptions.Instence.rockChance.Value)
                 {
-                    SpawnRock(self);
+                    SpawnSurprise(self);
                 }
             }
         }
@@ -142,25 +149,25 @@ namespace NitrousAccelerate
             self.room.PlaySound(sound, self.bodyChunks[1],false,volume,1f);
         }
 
-        private void SpawnRock(Player self)
+        private void SpawnSurprise(Player self)
         {
-            // 获取当前房间
             Room room = self.room;
             if (room == null || room.world == null) return;
 
-            // 生成石头的抽象对象
             EntityID id = room.world.game.GetNewID();
-            AbstractPhysicalObject rockAbstract = new AbstractPhysicalObject(
+            WorldCoordinate coord = room.GetWorldCoordinate(self.bodyChunks[1].pos);
+
+            // 调用工厂方法直接生成正确的子类对象
+            AbstractPhysicalObject surpriseAbstract = NitrousAccelerate.SpawnSurprise.CreateSurpriseObject(
+                NitrousAccelerateOptions.Instence.surpriseClass.Value,
                 room.world,
-                AbstractPhysicalObject.AbstractObjectType.Rock,
-                null,
-                room.GetWorldCoordinate(self.bodyChunks[1].pos),
+                coord,
                 id
             );
 
-            // 将抽象对象放入房间，并实体化
-            room.abstractRoom.AddEntity(rockAbstract);
-            rockAbstract.RealizeInRoom();
+            // 放入房间并实体化
+            room.abstractRoom.AddEntity(surpriseAbstract);
+            surpriseAbstract.RealizeInRoom();
         }
 
 
